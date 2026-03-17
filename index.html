@@ -592,20 +592,7 @@
     <div id="revenue-table-container"></div>
   </div>
 
-  <!-- Monthly Trend Line Chart -->
-  <div class="section-card">
-    <div class="section-header">
-      <div>
-        <h3>Monthly Revenue Trend</h3>
-        <div class="section-subtitle">Total revenue by month across all progressors</div>
-      </div>
-    </div>
-    <div class="chart-container">
-      <canvas id="trend-chart"></canvas>
-    </div>
-  </div>
-
-  <!-- Pie Chart -->
+  <!-- Pie Chart (same filters as table) -->
   <div class="section-card">
     <div class="section-header">
       <div>
@@ -615,6 +602,27 @@
     </div>
     <div class="chart-container">
       <canvas id="pie-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <hr style="border: none; border-top: 2px solid #d0d8e4; margin: 32px 0;">
+
+  <!-- Monthly Revenue Trend (own year filter) -->
+  <div class="section-card">
+    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h3>Monthly Revenue Trend</h3>
+        <div class="section-subtitle">Total revenue by month for the selected calendar year</div>
+      </div>
+      <div class="filter-control-group" style="margin-left: auto;">
+        <label for="trend-year-select">Year</label>
+        <select id="trend-year-select" onchange="applyTrendFilter()">
+        </select>
+      </div>
+    </div>
+    <div class="chart-container" style="height: 350px;">
+      <canvas id="trend-chart"></canvas>
     </div>
   </div>
 </main>
@@ -839,7 +847,7 @@
       const item = document.createElement('div'); item.className = 'filter-item';
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = `cb-${board.id}`;
       cb.checked = board.id in saved ? saved[board.id] : true;
-      cb.addEventListener('change', () => { saveFilter(); applyFilters(); });
+      cb.addEventListener('change', () => { saveFilter(); applyFilters(); applyTrendFilter(); });
       const label = document.createElement('label'); label.htmlFor = `cb-${board.id}`; label.textContent = board.name; label.title = board.name;
       item.appendChild(cb); item.appendChild(label);
       item.addEventListener('click', e => { if (e.target !== cb) cb.click(); });
@@ -860,13 +868,13 @@
   function selectAllBoards(e) {
     e.stopPropagation();
     boardsCache.forEach(b => { const cb = document.getElementById(`cb-${b.id}`); if (cb) cb.checked = true; });
-    saveFilter(); updateFilterBadge(); applyFilters();
+    saveFilter(); updateFilterBadge(); applyFilters(); applyTrendFilter();
   }
 
   function deselectAllBoards(e) {
     e.stopPropagation();
     boardsCache.forEach(b => { const cb = document.getElementById(`cb-${b.id}`); if (cb) cb.checked = false; });
-    saveFilter(); updateFilterBadge(); applyFilters();
+    saveFilter(); updateFilterBadge(); applyFilters(); applyTrendFilter();
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -1047,11 +1055,51 @@
     `;
   }
 
-  function renderTrendChart(allItems) {
-    const canvas = document.getElementById('trend-chart');
+  // ── Trend chart (independent year filter) ─────────────────────────────────
+  function populateTrendYearSelect(items) {
+    const yearSet = new Set();
+    for (const { item, colMap } of items) {
+      const data = extractItemData(item, colMap, '');
+      if (data.exchangeDate) {
+        const [y] = data.exchangeDate.split('-');
+        yearSet.add(parseInt(y));
+      }
+    }
+    const trendSelect = document.getElementById('trend-year-select');
+    const currentYear = new Date().getFullYear();
+    trendSelect.innerHTML = '';
+    const years = Array.from(yearSet).sort((a, b) => b - a);
+    for (const y of years) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      trendSelect.appendChild(opt);
+    }
+    // Default to current year if available
+    if (years.includes(currentYear)) {
+      trendSelect.value = currentYear;
+    }
+  }
 
-    // Build monthly totals from ALL items (ignoring month/year filter, but respecting board filter)
-    const monthlyTotals = {};  // { 'YYYY-MM': total }
+  function applyTrendFilter() {
+    const items = getCheckedItems();
+    const selectedYear = parseInt(document.getElementById('trend-year-select').value);
+    renderTrendChart(items, selectedYear);
+  }
+
+  function renderTrendChart(allItems, selectedYear) {
+    const canvas = document.getElementById('trend-chart');
+    if (!canvas) return;
+
+    // Build monthly totals for the selected calendar year only
+    // Always show all 12 months (Jan–Dec), even if some are zero
+    const monthlyTotals = {};
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // Initialise all 12 months to zero
+    for (let m = 1; m <= 12; m++) {
+      monthlyTotals[m] = 0;
+    }
 
     for (const { item, colMap, boardName } of allItems) {
       const data = extractItemData(item, colMap, boardName);
@@ -1059,30 +1107,16 @@
 
       const [year, month] = data.exchangeDate.split('-');
       if (!year || !month) continue;
-      const key = `${year}-${month.padStart(2, '0')}`;
+      if (parseInt(year) !== selectedYear) continue;
 
-      const owners = data.owner.split(',').map(o => o.trim()).filter(o => o);
-      if (owners.length === 0) owners.push('(Unknown)');
-      const feePerOwner = data.fee / owners.length;
-
-      monthlyTotals[key] = (monthlyTotals[key] || 0) + data.fee;
+      monthlyTotals[parseInt(month)] += data.fee;
     }
 
-    if (Object.keys(monthlyTotals).length === 0) {
-      canvas.parentElement.innerHTML = '<div class="empty-state"><p>No data for chart</p></div>';
-      return;
+    const labels = MONTH_NAMES.map((name, i) => `${name} ${selectedYear}`);
+    const values = [];
+    for (let m = 1; m <= 12; m++) {
+      values.push(monthlyTotals[m]);
     }
-
-    // Sort by date and build labels/values
-    const sortedKeys = Object.keys(monthlyTotals).sort();
-    const labels = sortedKeys.map(k => {
-      const [y, m] = k.split('-');
-      return new Date(parseInt(y), parseInt(m) - 1).toLocaleString('en-GB', { month: 'short', year: 'numeric' });
-    });
-    const values = sortedKeys.map(k => monthlyTotals[k]);
-
-    // Ensure chart container has good height
-    canvas.parentElement.style.height = '350px';
 
     if (charts['trend-chart']) {
       charts['trend-chart'].destroy();
@@ -1109,9 +1143,7 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: function(ctx) {
@@ -1123,7 +1155,7 @@
         scales: {
           x: {
             grid: { display: false },
-            ticks: { font: { size: 11 }, maxRotation: 45 }
+            ticks: { font: { size: 11 } }
           },
           y: {
             beginAtZero: true,
@@ -1245,7 +1277,6 @@
 
     renderWarningWidgets(exchangeWarnings.length, completionWarnings.length);
     renderRevenueTable(revenues, selectedMonth, selectedYear);
-    renderTrendChart(items);
     renderPieChart(revenues);
   }
 
@@ -1271,6 +1302,7 @@
 
       const allItems = getCheckedItems();
       populateYearSelect(allItems);
+      populateTrendYearSelect(allItems);
 
       // Set default month to current month
       const monthSelect = document.getElementById('month-select');
@@ -1280,6 +1312,7 @@
 
       statusBar.textContent = 'Rendering…';
       applyFilters();
+      applyTrendFilter();
 
       statusBar.style.display = 'none';
       document.getElementById('last-refresh').textContent = new Date().toLocaleTimeString('en-GB');
