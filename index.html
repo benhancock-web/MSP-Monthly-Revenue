@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Momentum SP — Monthly Revenue Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito Sans', 'Avenir Next', Avenir, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #0C3C60;
+      color: #fff;
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-logo-wrap {
+      background: #fff;
+      border-radius: 8px;
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    .header-logo {
+      height: 32px;
+      width: auto;
+      display: block;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 28px;
+      background: rgba(255,255,255,0.25);
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      opacity: 0.9;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #refresh-info {
+      font-size: 13px;
+      opacity: 0.85;
+      text-align: right;
+    }
+
+    #refresh-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 6px;
+      transition: background 0.2s;
+    }
+
+    #refresh-btn:hover {
+      background: rgba(255,255,255,0.35);
+    }
+
+    #refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    main {
+      padding: 28px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    #status-bar {
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #555;
+      border-left: 4px solid #0C3C60;
+      display: none;
+    }
+
+    #error-bar {
+      background: #fff0f0;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #c0392b;
+      border-left: 4px solid #e74c3c;
+      display: none;
+    }
+
+    /* Board filter panel */
+    #filter-panel {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+      overflow: hidden;
+      display: none;
+    }
+
+    #filter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+
+    #filter-header:hover {
+      background: #f7f9fc;
+    }
+
+    #filter-panel.open #filter-header {
+      border-bottom-color: #e8ecf0;
+    }
+
+    #filter-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+    }
+
+    #filter-toggle-arrow {
+      font-size: 11px;
+      color: #888;
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+
+    #filter-panel.open #filter-toggle-arrow {
+      transform: rotate(180deg);
+    }
+
+    #filter-badge {
+      background: #0C3C60;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    #filter-badge.filtered {
+      background: #fdab3d;
+    }
+
+    #filter-header-right {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-action-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      border: 1px solid #d0d8e4;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .filter-action-btn:hover {
+      background: #f0f4fa;
+      border-color: #0C3C60;
+      color: #0C3C60;
+    }
+
+    #filter-body {
+      padding: 14px 18px 16px;
+      display: none;
+    }
+
+    #filter-panel.open #filter-body {
+      display: block;
+    }
+
+    #filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 6px 16px;
+    }
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .filter-item:hover {
+      background: #f0f4fa;
+    }
+
+    .filter-item input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: #0C3C60;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .filter-item label {
+      font-size: 13px;
+      color: #333;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Warning widgets */
+    .warning-widgets {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .warning-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border-left: 4px solid #fdab3d;
+    }
+
+    .warning-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #222;
+      margin-bottom: 8px;
+    }
+
+    .warning-card-count {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fdab3d;
+    }
+
+    /* Filter controls (Month/Year dropdowns) */
+    .filter-controls {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      gap: 20px;
+      align-items: flex-end;
+    }
+
+    .filter-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .filter-control-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-control-group select {
+      font-family: inherit;
+      font-size: 13px;
+      color: #333;
+      background: #fff;
+      border: 1px solid #d0d8e4;
+      border-radius: 6px;
+      padding: 8px 32px 8px 10px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 0.15s;
+    }
+
+    .filter-control-group select:focus {
+      outline: none;
+      border-color: #0C3C60;
+    }
+
+    /* Section cards */
+    .section-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #222;
+    }
+
+    .section-subtitle {
+      font-size: 12px;
+      color: #999;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* Revenue table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .items-table thead th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      padding: 7px 12px;
+      background: #fff;
+      border-bottom: 1px solid #eef0f3;
+      white-space: nowrap;
+    }
+
+    .items-table tbody tr:hover {
+      background: #f7f9fc;
+    }
+
+    .items-table tbody td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0f2f5;
+      color: #333;
+      vertical-align: middle;
+    }
+
+    .items-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .items-table tbody tr.total-row {
+      background: #f7f9fc;
+      font-weight: 700;
+    }
+
+    .items-table tbody tr.total-row td {
+      padding: 10px 12px;
+      border-top: 2px solid #ddd;
+    }
+
+    /* Chart containers */
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-bottom: 20px;
+    }
+
+    /* Login overlay */
+    #login-overlay {
+      display: flex;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    #login-overlay.hidden {
+      display: none;
+    }
+
+    #login-modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+      width: 90%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    #login-modal h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0C3C60;
+      margin-bottom: 6px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 22px;
+    }
+
+    #login-password {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d0d8e4;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      font-family: inherit;
+    }
+
+    #login-password:focus {
+      outline: none;
+      border-color: #0C3C60;
+      box-shadow: 0 0 0 3px rgba(12,60,96,0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      background: #0C3C60;
+      border: none;
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .login-btn:hover {
+      background: #0a2f4d;
+    }
+
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #login-error {
+      font-size: 12px;
+      color: #c0392b;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo-wrap">
+      <svg class="header-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9h2v10H3V9zm4-4h2v14H7V5zm4-2h2v16h-2V3zm4 3h2v13h-2V6zm4-3h2v16h-2V3z" fill="#0C3C60"/>
+      </svg>
+    </div>
+    <div class="header-divider"></div>
+    <h1>Monthly Revenue Report</h1>
+  </div>
+  <div class="header-right">
+    <div id="refresh-info">
+      <div style="margin-bottom: 2px;">Last refreshed</div>
+      <div id="last-refresh" style="font-size: 12px; font-weight: 600;">—</div>
+    </div>
+    <button id="refresh-btn" onclick="loadDashboard()">Refresh</button>
+  </div>
+</header>
+
+<main>
+  <div id="status-bar"></div>
+  <div id="error-bar"></div>
+
+  <!-- Board filter panel -->
+  <div id="filter-panel">
+    <div id="filter-header" onclick="toggleFilter()">
+      <div id="filter-header-left">
+        <span id="filter-toggle-arrow">▼</span>
+        <span>Available Boards</span>
+        <span id="filter-badge">0</span>
+      </div>
+      <div id="filter-header-right">
+        <button class="filter-action-btn" onclick="selectAllBoards(event)">Select All</button>
+        <button class="filter-action-btn" onclick="deselectAllBoards(event)">Deselect All</button>
+      </div>
+    </div>
+    <div id="filter-body">
+      <div id="filter-grid"></div>
+    </div>
+  </div>
+
+  <!-- Warning widgets -->
+  <div class="warning-widgets" id="warning-widgets"></div>
+
+  <!-- Filter controls (Month/Year) -->
+  <div class="filter-controls">
+    <div class="filter-control-group">
+      <label for="month-select">Month</label>
+      <select id="month-select" onchange="applyFilters()">
+        <option value="">All Months</option>
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+    </div>
+    <div class="filter-control-group">
+      <label for="year-select">Year</label>
+      <select id="year-select" onchange="applyFilters()">
+        <option value="">All Years</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Revenue Table -->
+  <div class="section-card">
+    <div class="section-header">
+      <div>
+        <h3>Revenue Summary</h3>
+        <div class="section-subtitle">Revenue by Sales Progressor and month</div>
+      </div>
+    </div>
+    <div id="revenue-table-container"></div>
+  </div>
+
+  <!-- Horizontal Stacked Bar Chart -->
+  <div class="section-card">
+    <div class="section-header">
+      <div>
+        <h3>Revenue Distribution (Horizontal)</h3>
+        <div class="section-subtitle">60% Revenue vs Momentum Revenue (40%) per progressor</div>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="bar-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Pie Chart -->
+  <div class="section-card">
+    <div class="section-header">
+      <div>
+        <h3>Revenue Share by Progressor</h3>
+        <div class="section-subtitle">Total revenue distribution</div>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="pie-chart"></canvas>
+    </div>
+  </div>
+</main>
+
+<!-- Login overlay -->
+<div id="login-overlay">
+  <div id="login-modal">
+    <h2>Momentum SP</h2>
+    <p class="login-subtitle">Enter your dashboard password to continue</p>
+    <input type="password" id="login-password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" autofocus />
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Sign in</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<script>
+  // ────────────────────────────────────────────────────────────────────────────
+  // CONFIG
+  // ────────────────────────────────────────────────────────────────────────────
+  const CF_BASE_URL = 'https://europe-west2-momentum-sp-invoicing.cloudfunctions.net/momentum-invoicing';
+  const COOKIE_NAME = 'msp_api_key';
+  const BOARD_FILTER_KEY = 'msp-revenue-board-filter';
+  const REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000;
+
+  const CHART_COLOURS = [
+    '#0C3C60', '#1E5A96', '#2E7BB4', '#4E9FD5', '#7BB4E3',
+    '#fdab3d', '#FFB84D', '#FFC466', '#FFD480', '#FFE0A6'
+  ];
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // STATE
+  // ────────────────────────────────────────────────────────────────────────────
+  let apiKey = '';
+  let boardsCache = [];
+  let boardItemsCache = {};
+  let allDiscoveredColumns = [];
+  const charts = {};
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // COOKIE HELPERS (cross-subdomain SSO)
+  // ────────────────────────────────────────────────────────────────────────────
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  function setCookie(name, value, days) {
+    let expires = '';
+    if (days) { const d = new Date(); d.setTime(d.getTime() + days * 86400000); expires = '; expires=' + d.toUTCString(); }
+    const domain = location.hostname.endsWith('.flowintel.co.uk') ? '; domain=.flowintel.co.uk' : '';
+    const secure = location.protocol === 'https:' ? '; Secure; SameSite=Lax' : '';
+    document.cookie = name + '=' + encodeURIComponent(value) + expires + domain + '; path=/' + secure;
+  }
+
+  function deleteCookie(name) {
+    const domain = location.hostname.endsWith('.flowintel.co.uk') ? '; domain=.flowintel.co.uk' : '';
+    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT' + domain + '; path=/';
+  }
+
+  function showLogin() { document.getElementById('login-overlay').classList.remove('hidden'); }
+  function hideLogin() { document.getElementById('login-overlay').classList.add('hidden'); }
+
+  async function doLogin() {
+    const pw = document.getElementById('login-password').value.trim();
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    if (!pw) { errEl.textContent = 'Please enter a password'; return; }
+    errEl.textContent = ''; btn.disabled = true;
+    try {
+      const res = await fetch(CF_BASE_URL + '/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      const json = await res.json();
+      if (json.success && json.api_key) {
+        apiKey = json.api_key;
+        setCookie(COOKIE_NAME, apiKey, 30);
+        hideLogin();
+        loadDashboard();
+      } else {
+        errEl.textContent = json.error || 'Invalid password';
+      }
+    } catch (err) {
+      errEl.textContent = 'Login failed: ' + err.message;
+    } finally { btn.disabled = false; }
+  }
+
+  function checkAuth() {
+    const saved = getCookie(COOKIE_NAME);
+    if (saved) { apiKey = saved; return true; }
+    return false;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // API PROXY (via Cloud Function)
+  // ────────────────────────────────────────────────────────────────────────────
+  async function cfFetch(endpoint, options = {}) {
+    const hdrs = { 'X-API-Key': apiKey, ...(options.headers || {}) };
+    if (options.body && !hdrs['Content-Type']) hdrs['Content-Type'] = 'application/json';
+    const res = await fetch(CF_BASE_URL + endpoint, {
+      ...options,
+      headers: hdrs
+    });
+    if (res.status === 401) {
+      deleteCookie(COOKIE_NAME);
+      apiKey = '';
+      showLogin();
+      throw new Error('Session expired — please log in again');
+    }
+    return res.json();
+  }
+
+  async function fetchAllSPBoards() {
+    const data = await cfFetch('/boards');
+    allDiscoveredColumns = (data.allDiscoveredColumns || []);
+    return data.boards || [];
+  }
+
+  async function fetchBoardItems(boardId) {
+    const data = await cfFetch('/items?board_id=' + boardId);
+    return data.items || [];
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // DATA FETCHING & CACHING
+  // ────────────────────────────────────────────────────────────────────────────
+  async function fetchAndCacheAllItems(boards) {
+    boardItemsCache = {};
+    const BATCH = 5;
+
+    for (let i = 0; i < boards.length; i += BATCH) {
+      const slice = boards.slice(i, i + BATCH);
+      const results = await Promise.all(
+        slice.map(b => fetchBoardItems(b.id).then(items => ({
+          boardId: b.id, boardName: b.name, items, colMap: b.colMap
+        })))
+      );
+      for (const { boardId, boardName, items, colMap } of results) {
+        boardItemsCache[boardId] = items.map(item => ({
+          item, colMap, boardName
+        }));
+      }
+    }
+  }
+
+  function getCheckedItems() {
+    const allItems = [];
+    for (const board of boardsCache) {
+      const cb = document.getElementById(`cb-${board.id}`);
+      if (cb && cb.checked) allItems.push(...(boardItemsCache[board.id] || []));
+    }
+    return allItems;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // DATA EXTRACTION
+  // ────────────────────────────────────────────────────────────────────────────
+  function extractFeeNumber(text, rawValue, displayValue) {
+    if (displayValue) {
+      const n = parseFloat(String(displayValue).replace(/[£,\s]/g, ''));
+      if (!isNaN(n) && n !== 0) return n;
+    }
+    if (text) {
+      const n = parseFloat(String(text).replace(/[£,\s]/g, ''));
+      if (!isNaN(n) && n !== 0) return n;
+    }
+    if (rawValue) {
+      const n = parseFloat(String(rawValue).replace(/[£,\s]/g, ''));
+      if (!isNaN(n) && n !== 0) return n;
+    }
+    return 0;
+  }
+
+  function extractItemData(item, colMap, boardName) {
+    let owner = '', fee = 0, exchangeDate = '', completionDate = '';
+
+    for (const cv of (item.column_values || [])) {
+      const colTitle = (colMap[cv.id] || '').toLowerCase();
+      const text = (cv.text || '').trim();
+
+      if (colTitle === 'owner' || colTitle === 'person') {
+        if (text) owner = text;
+      } else if (colTitle.includes('fee pipeline')) {
+        fee = extractFeeNumber(text, cv.value, cv.display_value);
+      } else if (colTitle === 'exchange date') {
+        exchangeDate = text;
+      } else if (colTitle === 'completion date') {
+        completionDate = text;
+      }
+    }
+
+    const spStatus = item.group?.title || '';
+    return { owner, fee, exchangeDate, completionDate, spStatus, boardName };
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // FILTER PANEL
+  // ────────────────────────────────────────────────────────────────────────────
+  function toggleFilter() {
+    const panel = document.getElementById('filter-panel');
+    panel.classList.toggle('open');
+  }
+
+  // ── Persistence (matches other dashboard patterns) ──
+  function loadSavedFilter() { try { return JSON.parse(localStorage.getItem(BOARD_FILTER_KEY) || '{}'); } catch { return {}; } }
+  function saveFilter() {
+    const s = {};
+    boardsCache.forEach(b => { const cb = document.getElementById(`cb-${b.id}`); if (cb) s[b.id] = cb.checked; });
+    localStorage.setItem(BOARD_FILTER_KEY, JSON.stringify(s));
+  }
+
+  function buildFilterPanel(boards) {
+    const grid = document.getElementById('filter-grid');
+    grid.innerHTML = '';
+    const saved = loadSavedFilter();
+    [...boards].sort((a,b) => a.name.localeCompare(b.name)).forEach(board => {
+      const item = document.createElement('div'); item.className = 'filter-item';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = `cb-${board.id}`;
+      cb.checked = board.id in saved ? saved[board.id] : true;
+      cb.addEventListener('change', () => { saveFilter(); applyFilters(); });
+      const label = document.createElement('label'); label.htmlFor = `cb-${board.id}`; label.textContent = board.name; label.title = board.name;
+      item.appendChild(cb); item.appendChild(label);
+      item.addEventListener('click', e => { if (e.target !== cb) cb.click(); });
+      grid.appendChild(item);
+    });
+    document.getElementById('filter-panel').style.display = 'block';
+    updateFilterBadge();
+  }
+
+  function updateFilterBadge() {
+    const total = boardsCache.length;
+    const checked = boardsCache.filter(b => { const cb = document.getElementById(`cb-${b.id}`); return cb && cb.checked; }).length;
+    const badge = document.getElementById('filter-badge');
+    badge.textContent = checked === total ? `${total}` : `${checked} / ${total}`;
+    badge.classList.toggle('filtered', checked !== total);
+  }
+
+  function selectAllBoards(e) {
+    e.stopPropagation();
+    boardsCache.forEach(b => { const cb = document.getElementById(`cb-${b.id}`); if (cb) cb.checked = true; });
+    saveFilter(); updateFilterBadge(); applyFilters();
+  }
+
+  function deselectAllBoards(e) {
+    e.stopPropagation();
+    boardsCache.forEach(b => { const cb = document.getElementById(`cb-${b.id}`); if (cb) cb.checked = false; });
+    saveFilter(); updateFilterBadge(); applyFilters();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // REVENUE CALCULATIONS
+  // ────────────────────────────────────────────────────────────────────────────
+  function processRevenueData(items, selectedMonth, selectedYear) {
+    const revenues = {}; // { progressor: { monthYear: { total, count } } }
+    const exchangeWarnings = [];
+    const completionWarnings = [];
+
+    for (const { item, colMap, boardName } of items) {
+      const data = extractItemData(item, colMap, boardName);
+      const { owner, fee, exchangeDate, spStatus } = data;
+
+      // Check for warnings
+      if (spStatus.toLowerCase().includes('exchang') && !exchangeDate) {
+        exchangeWarnings.push(item.id);
+      }
+      if (spStatus.toLowerCase().includes('complet') && !data.completionDate) {
+        completionWarnings.push(item.id);
+      }
+
+      // Skip if no exchange date
+      if (!exchangeDate) continue;
+
+      // Parse exchange date
+      const [year, month, day] = exchangeDate.split('-');
+      const monthNum = parseInt(month);
+      const yearNum = parseInt(year);
+
+      // Apply filters
+      if (selectedMonth && monthNum !== selectedMonth) continue;
+      if (selectedYear && yearNum !== selectedYear) continue;
+
+      // Handle dual owners (split fee 50/50)
+      const owners = owner.split(',').map(o => o.trim()).filter(o => o);
+      if (owners.length === 0) owners.push('(Unknown)');
+
+      for (const prog of owners) {
+        if (!revenues[prog]) revenues[prog] = {};
+        const monthKey = `${monthNum}-${yearNum}`;
+        if (!revenues[prog][monthKey]) {
+          revenues[prog][monthKey] = { total: 0, count: 0 };
+        }
+        revenues[prog][monthKey].total += fee / owners.length;
+        revenues[prog][monthKey].count++;
+      }
+    }
+
+    return { revenues, exchangeWarnings, completionWarnings };
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // RENDER FUNCTIONS
+  // ────────────────────────────────────────────────────────────────────────────
+  function renderWarningWidgets(exchangeCount, completionCount) {
+    const container = document.getElementById('warning-widgets');
+    container.innerHTML = '';
+
+    if (exchangeCount > 0) {
+      container.innerHTML += `
+        <div class="warning-card">
+          <div class="warning-card-title">Exchanged Without Exchange Date</div>
+          <div class="warning-card-count">${exchangeCount}</div>
+        </div>
+      `;
+    }
+
+    if (completionCount > 0) {
+      container.innerHTML += `
+        <div class="warning-card">
+          <div class="warning-card-title">Completed Without Completion Date</div>
+          <div class="warning-card-count">${completionCount}</div>
+        </div>
+      `;
+    }
+
+    if (exchangeCount === 0 && completionCount === 0) {
+      container.innerHTML = '';
+    }
+  }
+
+  function renderRevenueTable(revenues, selectedMonth, selectedYear) {
+    const container = document.getElementById('revenue-table-container');
+
+    if (Object.keys(revenues).length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No revenue data for selected filters</p></div>';
+      return;
+    }
+
+    let rows = '';
+    let totalGross = 0, total60 = 0, total40 = 0;
+
+    // If filtering by specific month/year, show one row per progressor
+    if (selectedMonth || selectedYear) {
+      const sorted = Object.entries(revenues).sort((a, b) => {
+        const aTotal = Object.values(a[1]).reduce((s, m) => s + m.total, 0);
+        const bTotal = Object.values(b[1]).reduce((s, m) => s + m.total, 0);
+        return bTotal - aTotal;
+      });
+
+      for (const [progressor, monthData] of sorted) {
+        const gross = Object.values(monthData).reduce((s, m) => s + m.total, 0);
+        const rev60 = gross * 0.6;
+        const rev40 = gross * 0.4;
+
+        rows += `
+          <tr>
+            <td><strong>${progressor}</strong></td>
+            <td>${formatCurrency(gross)}</td>
+            <td>${formatCurrency(rev60)}</td>
+            <td>${formatCurrency(rev40)}</td>
+          </tr>
+        `;
+
+        totalGross += gross;
+        total60 += rev60;
+        total40 += rev40;
+      }
+    } else {
+      // Show all months for each progressor
+      const sorted = Object.entries(revenues).sort((a, b) => {
+        const aTotal = Object.values(a[1]).reduce((s, m) => s + m.total, 0);
+        const bTotal = Object.values(b[1]).reduce((s, m) => s + m.total, 0);
+        return bTotal - aTotal;
+      });
+
+      for (const [progressor, monthData] of sorted) {
+        // Sort by month
+        const months = Object.entries(monthData).sort((a, b) => {
+          const [aM, aY] = a[0].split('-');
+          const [bM, bY] = b[0].split('-');
+          return parseInt(aY) - parseInt(bY) || parseInt(aM) - parseInt(bM);
+        });
+
+        for (const [monthKey, mData] of months) {
+          const [m, y] = monthKey.split('-');
+          const monthName = new Date(parseInt(y), parseInt(m) - 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+          const gross = mData.total;
+          const rev60 = gross * 0.6;
+          const rev40 = gross * 0.4;
+
+          rows += `
+            <tr>
+              <td><strong>${progressor}</strong></td>
+              <td style="color: #999; font-size: 11px;">${monthName}</td>
+              <td>${formatCurrency(gross)}</td>
+              <td>${formatCurrency(rev60)}</td>
+              <td>${formatCurrency(rev40)}</td>
+            </tr>
+          `;
+
+          totalGross += gross;
+          total60 += rev60;
+          total40 += rev40;
+        }
+      }
+    }
+
+    const headers = selectedMonth || selectedYear
+      ? '<th>Sales Progressor</th><th>Revenue (Total)</th><th>60% Revenue</th><th>Momentum Revenue</th>'
+      : '<th>Sales Progressor</th><th>Month/Year</th><th>Revenue (Total)</th><th>60% Revenue</th><th>Momentum Revenue</th>';
+
+    rows += `
+      <tr class="total-row">
+        ${selectedMonth || selectedYear ? '<td>TOTAL</td>' : '<td colspan="2">TOTAL</td>'}
+        <td>${formatCurrency(totalGross)}</td>
+        <td>${formatCurrency(total60)}</td>
+        <td>${formatCurrency(total40)}</td>
+      </tr>
+    `;
+
+    container.innerHTML = `
+      <table class="items-table">
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function renderBarChart(revenues) {
+    const canvas = document.getElementById('bar-chart');
+
+    if (Object.keys(revenues).length === 0) {
+      canvas.parentElement.innerHTML = '<div class="empty-state"><p>No data for chart</p></div>';
+      return;
+    }
+
+    // Dynamic height based on number of progressors
+    const numProgressors = Object.keys(revenues).length;
+    canvas.parentElement.style.height = Math.max(300, numProgressors * 40 + 60) + 'px';
+
+    const labels = Object.keys(revenues)
+      .map(p => [p, Object.values(revenues[p]).reduce((s, m) => s + m.total, 0)])
+      .sort((a, b) => b[1] - a[1])
+      .map(x => x[0]);
+
+    const values60 = labels.map(p => Object.values(revenues[p]).reduce((s, m) => s + m.total * 0.6, 0));
+    const values40 = labels.map(p => Object.values(revenues[p]).reduce((s, m) => s + m.total * 0.4, 0));
+
+    if (charts['bar-chart']) {
+      charts['bar-chart'].destroy();
+    }
+
+    charts['bar-chart'] = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: '60% Revenue',
+            data: values60,
+            backgroundColor: '#2E7BB4',
+            borderWidth: 0
+          },
+          {
+            label: 'Momentum Revenue (40%)',
+            data: values40,
+            backgroundColor: '#0C3C60',
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: { font: { size: 12 }, boxWidth: 12, padding: 14 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.x);
+              }
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, grid: { color: '#f0f2f5' } },
+          y: { stacked: true }
+        }
+      }
+    });
+  }
+
+  function renderPieChart(revenues) {
+    const canvas = document.getElementById('pie-chart');
+
+    if (Object.keys(revenues).length === 0) {
+      canvas.parentElement.innerHTML = '<div class="empty-state"><p>No data for chart</p></div>';
+      return;
+    }
+
+    const labels = Object.keys(revenues)
+      .map(p => [p, Object.values(revenues[p]).reduce((s, m) => s + m.total, 0)])
+      .sort((a, b) => b[1] - a[1])
+      .map(x => x[0]);
+
+    const values = labels.map(p => Object.values(revenues[p]).reduce((s, m) => s + m.total, 0));
+    const colours = labels.map((_, i) => CHART_COLOURS[i % CHART_COLOURS.length]);
+
+    if (charts['pie-chart']) {
+      charts['pie-chart'].destroy();
+    }
+
+    charts['pie-chart'] = new Chart(canvas, {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colours,
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'right',
+            labels: { font: { size: 12 }, boxWidth: 12, padding: 14 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const label = ctx.label || '';
+                const value = formatCurrency(ctx.parsed);
+                const total = values.reduce((a, b) => a + b, 0);
+                const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                return label + ': ' + value + ' (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function formatCurrency(num) {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(num);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // FILTER APPLICATION
+  // ────────────────────────────────────────────────────────────────────────────
+  function populateYearSelect(items) {
+    const yearSet = new Set();
+    for (const { item, colMap } of items) {
+      const data = extractItemData(item, colMap, '');
+      if (data.exchangeDate) {
+        const [y] = data.exchangeDate.split('-');
+        yearSet.add(parseInt(y));
+      }
+    }
+
+    const yearSelect = document.getElementById('year-select');
+    const years = Array.from(yearSet).sort((a, b) => b - a);
+    const currentYear = new Date().getFullYear();
+
+    // Keep "All Years" option
+    while (yearSelect.children.length > 1) {
+      yearSelect.removeChild(yearSelect.lastChild);
+    }
+
+    for (const y of years) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSelect.appendChild(opt);
+    }
+
+    // Set default to current year
+    if (yearSelect.value === '') {
+      yearSelect.value = currentYear;
+    }
+  }
+
+  function applyFilters() {
+    const monthVal = document.getElementById('month-select').value;
+    const yearVal = document.getElementById('year-select').value;
+
+    const selectedMonth = monthVal ? parseInt(monthVal) : 0;
+    const selectedYear = yearVal ? parseInt(yearVal) : 0;
+
+    const items = getCheckedItems();
+    const { revenues, exchangeWarnings, completionWarnings } = processRevenueData(items, selectedMonth, selectedYear);
+
+    renderWarningWidgets(exchangeWarnings.length, completionWarnings.length);
+    renderRevenueTable(revenues, selectedMonth, selectedYear);
+    renderBarChart(revenues);
+    renderPieChart(revenues);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // MAIN LOAD FUNCTION
+  // ────────────────────────────────────────────────────────────────────────────
+  async function loadDashboard() {
+    const statusBar = document.getElementById('status-bar');
+    const errorBar = document.getElementById('error-bar');
+    const refreshBtn = document.getElementById('refresh-btn');
+
+    statusBar.style.display = 'block';
+    statusBar.textContent = 'Loading boards…';
+    errorBar.style.display = 'none';
+    refreshBtn.disabled = true;
+
+    try {
+      boardsCache = await fetchAllSPBoards();
+      buildFilterPanel(boardsCache);
+
+      statusBar.textContent = 'Fetching items…';
+      await fetchAndCacheAllItems(boardsCache);
+
+      const allItems = getCheckedItems();
+      populateYearSelect(allItems);
+
+      // Set default month to current month
+      const monthSelect = document.getElementById('month-select');
+      if (!monthSelect.dataset.userSet) {
+        monthSelect.value = String(new Date().getMonth() + 1);
+      }
+
+      statusBar.textContent = 'Rendering…';
+      applyFilters();
+
+      statusBar.style.display = 'none';
+      document.getElementById('last-refresh').textContent = new Date().toLocaleTimeString('en-GB');
+    } catch (err) {
+      errorBar.style.display = 'block';
+      errorBar.textContent = 'Error: ' + err.message;
+      console.error(err);
+    } finally {
+      refreshBtn.disabled = false;
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // STARTUP
+  // ────────────────────────────────────────────────────────────────────────────
+  if (checkAuth()) {
+    hideLogin();
+    loadDashboard();
+  } else {
+    showLogin();
+  }
+
+  setInterval(loadDashboard, REFRESH_INTERVAL_MS);
+</script>
+
+</body>
+</html>
