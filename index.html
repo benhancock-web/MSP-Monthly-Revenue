@@ -553,6 +553,13 @@
   <!-- Warning widgets -->
   <div class="warning-widgets" id="warning-widgets"></div>
 
+  <!-- Section divider -->
+  <div style="margin: 24px 0; padding: 0; display: flex; align-items: center; gap: 14px;">
+    <div style="flex: 1; height: 4px; background: #0C3C60; border-radius: 2px;"></div>
+    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #0C3C60; white-space: nowrap;">Monthly Revenue</span>
+    <div style="flex: 1; height: 4px; background: #0C3C60; border-radius: 2px;"></div>
+  </div>
+
   <!-- Filter controls (Month/Year) -->
   <div class="filter-controls">
     <div class="filter-control-group">
@@ -606,7 +613,11 @@
   </div>
 
   <!-- Divider -->
-  <hr style="border: none; border-top: 2px solid #d0d8e4; margin: 32px 0;">
+  <div style="margin: 36px 0; padding: 0; display: flex; align-items: center; gap: 14px;">
+    <div style="flex: 1; height: 4px; background: #0C3C60; border-radius: 2px;"></div>
+    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #0C3C60; white-space: nowrap;">Annual Trend</span>
+    <div style="flex: 1; height: 4px; background: #0C3C60; border-radius: 2px;"></div>
+  </div>
 
   <!-- Monthly Revenue Trend (own year filter) -->
   <div class="section-card">
@@ -615,9 +626,9 @@
         <h3>Monthly Revenue Trend</h3>
         <div class="section-subtitle">Total revenue by month for the selected calendar year</div>
       </div>
-      <div class="filter-control-group" style="margin-left: auto;">
-        <label for="trend-year-select">Year</label>
-        <select id="trend-year-select" onchange="applyTrendFilter()">
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 10px; background: #0C3C60; padding: 8px 16px; border-radius: 8px;">
+        <label for="trend-year-select" style="font-size: 12px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">Year</label>
+        <select id="trend-year-select" onchange="applyTrendFilter()" style="font-family: inherit; font-size: 14px; font-weight: 700; color: #0C3C60; background: #fff; border: none; border-radius: 6px; padding: 6px 30px 6px 10px; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230C3C60' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 10px center;">
         </select>
       </div>
     </div>
@@ -954,7 +965,15 @@
 
     if (exchangeCount === 0 && completionCount === 0) {
       container.innerHTML = '';
+      return;
     }
+
+    // Asterisk note beneath the warning widgets
+    container.innerHTML += `
+      <div style="grid-column: 1 / -1; font-size: 11px; color: #888; font-style: italic; padding: 2px 4px;">
+        * Properties without an exchange date are excluded from all revenue figures below.
+      </div>
+    `;
   }
 
   function renderRevenueTable(revenues, selectedMonth, selectedYear) {
