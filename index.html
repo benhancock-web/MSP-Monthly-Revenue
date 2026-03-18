@@ -329,6 +329,40 @@
       border-color: #0C3C60;
     }
 
+    /* Toggle switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .toggle-label { font-size: 12px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: color 0.2s; }
+    .toggle-label.active { color: #0C3C60; }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #ccc;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-switch.active { background: #0C3C60; }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch.active::after { transform: translateX(20px); }
+
     /* Section cards */
     .section-card {
       background: #fff;
@@ -586,6 +620,11 @@
         <option value="">All Years</option>
       </select>
     </div>
+    <div class="toggle-container">
+      <span class="toggle-label active" id="toggle-label-prog">By Progressor</span>
+      <div class="toggle-switch" id="view-toggle" onclick="toggleView()"></div>
+      <span class="toggle-label" id="toggle-label-agent">By Agent</span>
+    </div>
   </div>
 
   <!-- Revenue Table -->
@@ -659,8 +698,9 @@
   const REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000;
 
   const CHART_COLOURS = [
-    '#0C3C60', '#1E5A96', '#2E7BB4', '#4E9FD5', '#7BB4E3',
-    '#fdab3d', '#FFB84D', '#FFC466', '#FFD480', '#FFE0A6'
+    '#0C3C60', '#00c875', '#fdab3d', '#e2445c', '#9d50dd',
+    '#0086c9', '#ff642e', '#faa1f1', '#579bfc', '#cab641',
+    '#66ccff', '#bb3354', '#00cff1', '#7f5347', '#4ecdc4'
   ];
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -671,6 +711,7 @@
   let boardItemsCache = {};
   let allDiscoveredColumns = [];
   const charts = {};
+  let viewByAgent = false; // false = By Progressor, true = By Agent
 
   // ────────────────────────────────────────────────────────────────────────────
   // COOKIE HELPERS (cross-subdomain SSO)
@@ -889,10 +930,24 @@
   }
 
   // ────────────────────────────────────────────────────────────────────────────
+  // VIEW TOGGLE
+  // ────────────────────────────────────────────────────────────────────────────
+  function toggleView() {
+    viewByAgent = !viewByAgent;
+    const toggle = document.getElementById('view-toggle');
+    const labelProg = document.getElementById('toggle-label-prog');
+    const labelAgent = document.getElementById('toggle-label-agent');
+    toggle.classList.toggle('active', viewByAgent);
+    labelProg.classList.toggle('active', !viewByAgent);
+    labelAgent.classList.toggle('active', viewByAgent);
+    applyFilters();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
   // REVENUE CALCULATIONS
   // ────────────────────────────────────────────────────────────────────────────
   function processRevenueData(items, selectedMonth, selectedYear) {
-    const revenues = {}; // { progressor: { monthYear: { total, count } } }
+    const revenues = {}; // { entity: { monthYear: { total, count } } }
     const exchangeWarnings = [];
     const completionWarnings = [];
 
@@ -920,18 +975,30 @@
       if (selectedMonth && monthNum !== selectedMonth) continue;
       if (selectedYear && yearNum !== selectedYear) continue;
 
-      // Handle dual owners (split fee 50/50)
-      const owners = owner.split(',').map(o => o.trim()).filter(o => o);
-      if (owners.length === 0) owners.push('(Unknown)');
-
-      for (const prog of owners) {
-        if (!revenues[prog]) revenues[prog] = {};
+      if (viewByAgent) {
+        // Group by board name — full fee to the agent, no splitting
+        const agentName = boardName || '(Unknown)';
+        if (!revenues[agentName]) revenues[agentName] = {};
         const monthKey = `${monthNum}-${yearNum}`;
-        if (!revenues[prog][monthKey]) {
-          revenues[prog][monthKey] = { total: 0, count: 0 };
+        if (!revenues[agentName][monthKey]) {
+          revenues[agentName][monthKey] = { total: 0, count: 0 };
         }
-        revenues[prog][monthKey].total += fee / owners.length;
-        revenues[prog][monthKey].count++;
+        revenues[agentName][monthKey].total += fee;
+        revenues[agentName][monthKey].count++;
+      } else {
+        // Group by progressor — split fee 50/50 for dual owners
+        const owners = owner.split(',').map(o => o.trim()).filter(o => o);
+        if (owners.length === 0) owners.push('(Unknown)');
+
+        for (const prog of owners) {
+          if (!revenues[prog]) revenues[prog] = {};
+          const monthKey = `${monthNum}-${yearNum}`;
+          if (!revenues[prog][monthKey]) {
+            revenues[prog][monthKey] = { total: 0, count: 0 };
+          }
+          revenues[prog][monthKey].total += fee / owners.length;
+          revenues[prog][monthKey].count++;
+        }
       }
     }
 
@@ -1053,9 +1120,10 @@
       }
     }
 
+    const entityLabel = viewByAgent ? 'Estate Agent' : 'Sales Progressor';
     const headers = selectedMonth || selectedYear
-      ? '<th>Sales Progressor</th><th>Revenue (Total)</th><th>Staff Revenue</th><th>Momentum Revenue</th>'
-      : '<th>Sales Progressor</th><th>Month/Year</th><th>Revenue (Total)</th><th>Staff Revenue</th><th>Momentum Revenue</th>';
+      ? `<th>${entityLabel}</th><th>Revenue (Total)</th><th>Staff Revenue</th><th>Momentum Revenue</th>`
+      : `<th>${entityLabel}</th><th>Month/Year</th><th>Revenue (Total)</th><th>Staff Revenue</th><th>Momentum Revenue</th>`;
 
     rows += `
       <tr class="total-row">
