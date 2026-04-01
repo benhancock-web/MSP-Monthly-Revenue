@@ -835,7 +835,7 @@
       );
       for (const { boardId, boardName, items, colMap } of results) {
         boardItemsCache[boardId] = items.map(item => ({
-          item, colMap, boardName
+          item, colMap, boardName, boardId
         }));
       }
       loaded += slice.length;
@@ -970,7 +970,7 @@
     const exchangeWarnings = [];
     const completionWarnings = [];
 
-    for (const { item, colMap, boardName } of items) {
+    for (const { item, colMap, boardName, boardId } of items) {
       const data = extractItemData(item, colMap, boardName);
       const { owner, fee, exchangeDate, spStatus } = data;
 
@@ -1008,7 +1008,8 @@
         revenues[agentName][monthKey].count++;
         revenues[agentName][monthKey].items.push({
           name: propertyName, fee, exchangeDate,
-          owner: owner || '(Unknown)', boardName: agentName
+          owner: owner || '(Unknown)', boardName: agentName,
+          itemId: item.id, boardId
         });
       } else {
         // Group by progressor — split fee 50/50 for dual owners
@@ -1025,7 +1026,8 @@
           revenues[prog][monthKey].count++;
           revenues[prog][monthKey].items.push({
             name: propertyName, fee: fee / owners.length, exchangeDate,
-            owner: prog, boardName: boardName || '(Unknown)'
+            owner: prog, boardName: boardName || '(Unknown)',
+            itemId: item.id, boardId
           });
         }
       }
@@ -1109,8 +1111,10 @@
     const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
     for (const p of sorted) {
       const secondary = p[secondaryField] || '(Unknown)';
+      const mondayUrl = p.boardId && p.itemId ? `https://marks-team879428.monday.com/boards/${p.boardId}/pulses/${p.itemId}` : '';
+      const nameHtml = mondayUrl ? `<a href="${mondayUrl}" target="_blank" rel="noopener" style="color:#0C3C60;text-decoration:none;border-bottom:1px dotted #0C3C60">${p.name}</a>` : p.name;
       html += `<tr class="detail-row" data-parent="${groupId}">
-        <td style="padding-left:30px">${p.name}</td>
+        <td style="padding-left:30px">${nameHtml}</td>
         <td>${secondary}</td>
         <td>${formatExchangeDate(p.exchangeDate)}</td>
         <td>${formatCurrency(p.fee)}</td>
