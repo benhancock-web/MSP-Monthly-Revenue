@@ -1092,8 +1092,8 @@
   function buildDetailRows(items, groupId, colCount, isAllMonths) {
     const secondaryField = viewByAgent ? 'owner' : 'boardName';
     const secondaryLabel = viewByAgent ? 'Sales Progressor' : 'Estate Agent';
-    const showStaffFee = !viewByAgent; // Show 60% staff revenue in By Progressor view
-    const detailCols = showStaffFee ? 5 : 4;
+    const showRevSplit = !viewByAgent; // Show revenue split columns in By Progressor view
+    const detailCols = showRevSplit ? 6 : 4;
     const emptyCols = colCount - detailCols;
     const subHdrStyle = 'font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#888;background:#f3f5f8';
     let html = '';
@@ -1103,8 +1103,9 @@
       <td style="padding-left:30px;${subHdrStyle}">Property Address</td>
       <td style="${subHdrStyle}">${secondaryLabel}</td>
       <td style="${subHdrStyle}">Exchange Date</td>
-      <td style="${subHdrStyle}">Fee</td>
-      ${showStaffFee ? `<td style="${subHdrStyle}">Staff Revenue (60%)</td>` : ''}
+      ${showRevSplit ? `<td style="${subHdrStyle}">Revenue (Total)</td>
+      <td style="${subHdrStyle}">Staff Revenue</td>
+      <td style="${subHdrStyle}">Momentum Revenue</td>` : `<td style="${subHdrStyle}">Fee</td>`}
       ${emptyCols > 0 ? `<td colspan="${emptyCols}" style="background:#f3f5f8"></td>` : ''}
     </tr>`;
 
@@ -1117,8 +1118,9 @@
         <td style="padding-left:30px">${nameHtml}</td>
         <td>${secondary}</td>
         <td>${formatExchangeDate(p.exchangeDate)}</td>
-        <td>${formatCurrency(p.fee)}</td>
-        ${showStaffFee ? `<td>${formatCurrency(p.fee * 0.6)}</td>` : ''}
+        ${showRevSplit ? `<td>${formatCurrency(p.fee)}</td>
+        <td>${formatCurrency(p.fee * 0.6)}</td>
+        <td>${formatCurrency(p.fee * 0.4)}</td>` : `<td>${formatCurrency(p.fee)}</td>`}
         ${emptyCols > 0 ? `<td colspan="${emptyCols}"></td>` : ''}
       </tr>`;
     }
