@@ -338,6 +338,20 @@
       border-color: #0C3C60;
     }
 
+    .filter-control-group .readonly-display {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0C3C60;
+      background: #f6f8fb;
+      border: 1px solid #d0d8e4;
+      border-radius: 6px;
+      padding: 8px 14px;
+      min-width: 64px;
+      text-align: center;
+      line-height: 1.2;
+    }
+
     /* Toggle switch */
     .toggle-container {
       display: flex;
@@ -645,6 +659,10 @@
       <select id="year-select" onchange="applyFilters()">
         <option value="">All Years</option>
       </select>
+    </div>
+    <div class="filter-control-group">
+      <label for="friday-count">Fridays</label>
+      <div id="friday-count" class="readonly-display">—</div>
     </div>
     <div class="toggle-container">
       <span class="toggle-label active" id="toggle-label-prog">By Progressor</span>
@@ -1082,7 +1100,7 @@
     // Asterisk note beneath the warning widgets
     container.innerHTML += `
       <div style="grid-column: 1 / -1; font-size: 11px; color: #888; font-style: italic; padding: 2px 4px;">
-        * Properties without an exchange date are excluded from all revenue figures below.
+        * Properties without an exchange date are excluded from all revenue figures below. For a breakdown of the specific records, see the <a href="https://missingdata.flowintel.co.uk/" target="_blank" rel="noopener" style="color: #0C3C60; font-weight: 600; text-decoration: underline;">Missing Data Report</a>.
       </div>
     `;
   }
@@ -1457,12 +1475,32 @@
     }
   }
 
+  function countFridaysInMonth(year, month) {
+    // month: 1-12
+    if (!year || !month) return null;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (new Date(year, month - 1, d).getDay() === 5) count++;
+    }
+    return count;
+  }
+
+  function updateFridayCount(selectedMonth, selectedYear) {
+    const el = document.getElementById('friday-count');
+    if (!el) return;
+    const n = countFridaysInMonth(selectedYear, selectedMonth);
+    el.textContent = (n === null) ? '—' : String(n);
+  }
+
   function applyFilters() {
     const monthVal = document.getElementById('month-select').value;
     const yearVal = document.getElementById('year-select').value;
 
     const selectedMonth = monthVal ? parseInt(monthVal) : 0;
     const selectedYear = yearVal ? parseInt(yearVal) : 0;
+
+    updateFridayCount(selectedMonth, selectedYear);
 
     const items = getCheckedItems();
     const { revenues, exchangeWarnings, completionWarnings } = processRevenueData(items, selectedMonth, selectedYear);
